@@ -3,6 +3,8 @@ import pygame
 from sys import argv
 import time
 
+from player import Player
+
 PW = 1
 PB = -1
 
@@ -72,7 +74,11 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 DARK_BROWN = (139, 69, 19)
 LIGHT_BROWN = (222, 184, 135)
+# Nice fancy selected color
+SELECTED = (50, 125, 30)
 
+WHITE_P = Player('Warrior_1', 6, 4)
+BLACK_P = Player('Warrior_2', 5, 4)
 
 class Game:
     def __init__(self):
@@ -150,20 +156,22 @@ class Game:
         # draw the pieces
         for i in range(8):
             for j in range(8):
+                if (i, j) == self.last_cell_clicked:
+                    pygame.draw.rect(
+                        self.board_surface,
+                        SELECTED,
+                        (i * self.cell_width, j * self.cell_width, self.cell_width, self.cell_width),
+                    )
                 if self.board.grid[i][j] == PW:
-                    pygame.draw.circle(
-                        self.board_surface,
-                        WHITE,
-                        (i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2),
-                        self.cell_width // 2 - 10,
-                    )
+                    if self.last_cell_clicked == (i, j):
+                        WHITE_P.draw_attack(self.board_surface, i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2)
+                    else:
+                        WHITE_P.draw(self.board_surface, i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2)
                 elif self.board.grid[i][j] == PB:
-                    pygame.draw.circle(
-                        self.board_surface,
-                        BLACK,
-                        (i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2),
-                        self.cell_width // 2 - 10,
-                    )
+                    if self.last_cell_clicked == (i, j):
+                        BLACK_P.draw_attack(self.board_surface, i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2)
+                    else:
+                        BLACK_P.draw(self.board_surface, i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2)
 
         self.screen.blit(self.board_surface, (self.board_start, self.board_start))
 
@@ -197,22 +205,32 @@ class Game:
                 self.last_cell_clicked = (x, y)
 
     def run(self):
-        while True:
+        fps = 15
+        clock = pygame.time.Clock()
+        RUNNING = True
+        while RUNNING:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     return
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handle_click(event.pos)
+                    if event.button == 1:
+                        self.handle_click(event.pos)
+                # Get right click to deselect
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    if event.button == 3:
+                        self.last_cell_clicked = None
 
                 # reset board on 'r'
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
                         self.board.reset()
                         self.turn = PW
+                        self.last_cell_clicked = None
 
             self.draw_board()
             pygame.display.update()
+            clock.tick(fps)
 
     def get_coords(self, move_str):
         split_str = 'x' if 'x' in move_str else '-'
@@ -231,6 +249,8 @@ class Game:
 
     def play(self, game_str):
         moves = game_str.split(';')
+        fps = 60
+        clock = pygame.time.Clock()
 
         coords = list(reversed([self.get_coords(move) for move in moves]))
         print(coords)
@@ -241,6 +261,8 @@ class Game:
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return
                     break
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
@@ -252,6 +274,7 @@ class Game:
 
                         self.draw_board()
                         pygame.display.update()
+                        clock.tick(fps)
         pygame.quit()
        
 
