@@ -28,7 +28,7 @@ class Board:
             return
 
         if not self.is_legal(f, t):
-            raise Exception("Illegal move")
+            raise Exception(f"Illegal move, at {self.grid_idx}, from {f} to {t}")
 
         self.history.append(self.grid.copy())
         self.grid_idx += 1
@@ -83,7 +83,7 @@ class Board:
             return False
 
         # can not kill own piece
-        if abs(x1 - x2) == 1 and self.grid[x2][y2] == self.grid[x1][y2]:
+        if abs(x1 - x2) == 1 and self.grid[x2][y2] == self.grid[x1][y1]:
             return False
         
         # cannot capture forward
@@ -132,7 +132,6 @@ class Game:
 
         self.last_cell_clicked = None
 
-        self.draw_coordinates()
         self.wpawn = self.get_pawn("white")
         self.bpawn = self.get_pawn("black")
 
@@ -177,6 +176,10 @@ class Game:
 
 
     def draw_board(self):
+
+        self.screen.fill(BLACK)
+        self.draw_coordinates()
+        
         # chessboard pattern with light and dark brown squares
         for i in range(8):
             for j in range(8):
@@ -192,6 +195,19 @@ class Game:
                         DARK_BROWN,
                         (i * self.cell_width, j * self.cell_width, self.cell_width, self.cell_width),
                     )
+
+        # draw number of moves above board
+        text = pygame.font.SysFont("comicsans", 40).render(
+            f"Moves: {self.board.grid_idx}", 1, WHITE
+        )
+
+        self.screen.blit(
+            text,
+            (
+                self.board_start + self.board_width // 2 - text.get_width() // 2,
+                self.board_start - text.get_height() - 10,
+            ),
+        )
 
         self.screen.blit(self.board_surface, (self.board_start, self.board_start))
 
