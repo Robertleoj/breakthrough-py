@@ -241,7 +241,8 @@ class Game:
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    break
+                    pygame.quit()
+                    return
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
                         if len(coords) == 0:
@@ -252,7 +253,6 @@ class Game:
 
                         self.draw_board()
                         pygame.display.update()
-        pygame.quit()
        
 
 if __name__ == "__main__":
