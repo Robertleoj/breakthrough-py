@@ -2,6 +2,8 @@ import numpy as np
 import pygame
 from sys import argv
 import time
+import signal
+import os
 
 PW = 1
 PB = -1
@@ -74,6 +76,7 @@ DARK_BROWN = (139, 69, 19)
 LIGHT_BROWN = (222, 184, 135)
 
 
+
 class Game:
     def __init__(self):
         self.board = Board()
@@ -96,8 +99,17 @@ class Game:
         self.last_cell_clicked = None
 
         self.draw_coordinates()
+        self.wpawn = self.get_pawn("white")
+        self.bpawn = self.get_pawn("black")
 
         pygame.display.set_caption("Breakthrough")
+
+    def get_pawn(self, color):
+        img_path = f"assets/pawn_{color}.png"
+        pawn = pygame.image.load(img_path)
+        pawn = pygame.transform.scale(pawn, (self.cell_width, self.cell_width))
+        return pawn
+
 
     def draw_coordinates(self):
         # coordinates are like chess
@@ -147,25 +159,36 @@ class Game:
                         (i * self.cell_width, j * self.cell_width, self.cell_width, self.cell_width),
                     )
 
+        self.screen.blit(self.board_surface, (self.board_start, self.board_start))
+
         # draw the pieces
         for i in range(8):
             for j in range(8):
                 if self.board.grid[i][j] == PW:
-                    pygame.draw.circle(
-                        self.board_surface,
-                        WHITE,
-                        (i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2),
-                        self.cell_width // 2 - 10,
+                    self.screen.blit(
+                        self.wpawn,
+                        # (i * self.cell_width + self.cell_width // 2 - self.wpawn.get_width() // 2, j * self.cell_width + self.cell_width // 2 - self.wpawn.get_height() // 2),
+                        (self.board_start + i * self.cell_width, self.board_start + j * self.cell_width),
                     )
+                    # pygame.draw.circle(
+                    #     self.board_surface,
+                    #     WHITE,
+                    #     (i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2),
+                    #     self.cell_width // 2 - 10,
+                    # )
                 elif self.board.grid[i][j] == PB:
-                    pygame.draw.circle(
-                        self.board_surface,
-                        BLACK,
-                        (i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2),
-                        self.cell_width // 2 - 10,
+                    self.screen.blit(
+                        self.bpawn,
+                        # (i * self.cell_width + self.cell_width // 2 - self.bpawn.get_width() // 2, j * self.cell_width + self.cell_width // 2 - self.bpawn.get_height() // 2),
+                        ( self.board_start + i * self.cell_width, self.board_start + j * self.cell_width),
                     )
+                    # pygame.draw.circle(
+                    #     self.board_surface,
+                    #     BLACK,
+                    #     (i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2),
+                    #     self.cell_width // 2 - 10,
+                    # )
 
-        self.screen.blit(self.board_surface, (self.board_start, self.board_start))
 
     def handle_click(self, pos):
         x, y = pos
@@ -256,6 +279,13 @@ class Game:
        
 
 if __name__ == "__main__":
+
+    def sigint_handler(signal, frame):
+        print('Exiting...')
+        os._exit(0) # force exit
+
+    signal.signal(signal.SIGINT, sigint_handler)
+
 
     print(argv)
     if len(argv) == 2 and argv[1] == 'str':
