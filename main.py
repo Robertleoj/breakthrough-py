@@ -10,12 +10,26 @@ PB = -1
 
 class Board:
     def __init__(self):
-        self.grid = np.zeros((8, 8))
+
+        self.history = [np.zeros((8, 8))]
+        self.grid_idx = 0
+
         self.grid[:, :2] = PB
         self.grid[:, -2:] = PW
         self.over = False
 
+    @property
+    def grid(self):
+        """I'm the 'x' property."""
+        return self.history[self.grid_idx]
+
     def move(self, f, t):
+        if self.grid_idx != len(self.history) - 1:
+            return
+
+        self.history.append(self.grid.copy())
+        self.grid_idx += 1
+
         x1, y1 = f
         x2, y2 = t
         
@@ -31,8 +45,20 @@ class Board:
         if y2 == 7 and curr == PB:
             self.over = True
 
+    def undo(self):
+        if self.grid_idx > 0:
+            self.grid_idx -= 1
+
+    def redo(self):
+        if self.grid_idx < len(self.history) - 1:
+            self.grid_idx += 1
+
+    def beginning(self):
+        self.grid_idx = 0
+
     def in_bounds(self, x, y):
         return 0 <= x < 8 and 0 <= y < 8
+
 
     def is_legal(self, f, t):
         if self.over:
@@ -239,6 +265,11 @@ class Game:
                         self.board.reset()
                         self.turn = PW
 
+                    if event.key == pygame.K_RIGHT:
+                        self.board.redo()
+                    if event.key == pygame.K_LEFT:
+                        self.board.undo()
+
             self.draw_board()
             pygame.display.update()
 
@@ -260,8 +291,13 @@ class Game:
     def play(self, game_str):
         moves = game_str.split(';')
 
-        coords = list(reversed([self.get_coords(move) for move in moves]))
+        coords = [self.get_coords(move) for move in moves]
         print(coords)
+
+        for fr, to in coords:
+            self.board.move(fr, to)
+
+        self.board.beginning()
 
         self.draw_board()
         pygame.display.update()
@@ -272,16 +308,18 @@ class Game:
                     pygame.quit()
                     return
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        if len(coords) == 0:
-                            continue
-                        fr, to = coords.pop()
-
-                        self.board.move(fr, to)
-
+                    # right arrow to see next move
+                    if event.key == pygame.K_RIGHT:
+                        self.board.redo()
                         self.draw_board()
+
                         pygame.display.update()
        
+                    if event.key == pygame.K_LEFT:
+                        self.board.undo()
+                        self.draw_board()
+
+                        pygame.display.update()
 
 if __name__ == "__main__":
 
