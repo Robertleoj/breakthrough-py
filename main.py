@@ -40,30 +40,35 @@ class Board:
 
         x1, y1 = f
         x2, y2 = t
+
+        # can not move more than 1 cell in x
         if abs(x1 - x2) > 1:
             return False
 
+        # needs to be in bounds
         if not self.in_bounds(x1, y1) or not self.in_bounds(x2, y2):
             return False
 
+        # can not move empty piece
         if self.grid[x1][y1] == 0:
             return False
 
+        # can not kill own piece
+        if abs(x1 - x2) == 1 and self.grid[x2][y2] == self.grid[x1][y2]:
+            return False
+        
+        # cannot capture forward
+        if x1 == x2 and self.grid[x2][y2] != 0:
+            return False
 
-        if self.grid[x1][y1] == PW:
-            if y1 != y2 + 1:
-                return False
 
-            if x1 == x2 and self.grid[x2][y2] != 0:
-                return False
+        # wite pieces move one forward
+        if self.grid[x1][y1] == PW and y1 != y2 + 1:
+            return False
 
-        if self.grid[x1][y1] == PB:
-            if y1 != y2 - 1:
-                return False
-
-            if x1 == x2 and self.grid[x2][y2] != 0:
-                return False
-
+        # black pieces move one forward
+        if self.grid[x1][y1] == PB and y1 != y2 - 1:
+            return False
 
         return True
 
