@@ -27,6 +27,9 @@ class Board:
         if self.grid_idx != len(self.history) - 1:
             return
 
+        if not self.is_legal(f, t):
+            raise Exception("Illegal move")
+
         self.history.append(self.grid.copy())
         self.grid_idx += 1
 
