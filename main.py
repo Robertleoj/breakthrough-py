@@ -11,8 +11,11 @@ PB = -1
 class Board:
     def __init__(self):
 
+        self.turn = PW
         self.history = [np.zeros((8, 8))]
         self.grid_idx = 0
+        self.alternate_history = None
+        self.alternate_idx = None
 
         self.grid[:, :2] = PB
         self.grid[:, -2:] = PW
@@ -21,17 +24,31 @@ class Board:
     @property
     def grid(self):
         """I'm the 'x' property."""
+        if self.alternate_idx is not None:
+            print("Returning altenate history")
+            return self.alternate_history[self.alternate_idx]
         return self.history[self.grid_idx]
 
+    def add_move(self):
+        if self.alternate_idx is not None:
+            self.alternate_history.append(self.alternate_history[-1].copy())
+            self.alternate_idx += 1
+        elif self.grid_idx < len(self.history) - 1:
+            self.alternate_history = [self.grid.copy()]
+            self.alternate_idx = 0
+            print("adding to alternate history")
+        else:
+            self.history.append(self.history[-1].copy())
+            self.grid_idx += 1
+
     def move(self, f, t):
-        if self.grid_idx != len(self.history) - 1:
-            return
 
         if not self.is_legal(f, t):
             raise Exception(f"Illegal move, at {self.grid_idx}, from {f} to {t}")
 
-        self.history.append(self.grid.copy())
-        self.grid_idx += 1
+        self.add_move()
+        # self.history.append(self.grid.copy())
+        # self.grid_idx += 1
 
         x1, y1 = f
         x2, y2 = t
@@ -48,16 +65,35 @@ class Board:
         if y2 == 7 and curr == PB:
             self.over = True
 
+        self.turn *= -1
+
     def undo(self):
-        if self.grid_idx > 0:
+        if self.alternate_idx is not None:
+            if self.alternate_idx > 0:
+                self.alternate_idx -= 1
+                self.alternate_history.pop()
+            else:
+                self.alternate_idx = None
+                self.alternate_history = None
+            self.turn *= -1
+
+        elif self.grid_idx > 0:
             self.grid_idx -= 1
+            self.turn *= -1
 
     def redo(self):
+        if self.alternate_idx is not None:
+            return
+
         if self.grid_idx < len(self.history) - 1:
             self.grid_idx += 1
+            self.turn *= -1
 
     def beginning(self):
+        self.alternate_history = None
+        self.alternate_idx = None
         self.grid_idx = 0
+        self.turn = PW
 
     def in_bounds(self, x, y):
         return 0 <= x < 8 and 0 <= y < 8
@@ -101,6 +137,9 @@ class Board:
 
         return True
 
+    def in_alternate(self):
+        return self.alternate_idx is not None
+
     def reset(self):
         self.__init__()
 
@@ -114,7 +153,6 @@ LIGHT_BROWN = (222, 184, 135)
 class Game:
     def __init__(self):
         self.board = Board()
-        self.turn = PW
         pygame.init()
         self.screen_width = 800
         self.screen_height = 800
@@ -209,6 +247,20 @@ class Game:
             ),
         )
 
+        # above number of moves, print if we are in alternate history
+        if self.board.in_alternate():
+            text = pygame.font.SysFont("comicsans", 40).render(
+                f"(Alternate history)", 1, WHITE
+            )
+
+            self.screen.blit(
+                text,
+                (
+                    self.board_start + self.board_width // 2 - text.get_width() // 2,
+                    self.board_start - text.get_height() * 2 - 10,
+                ),
+            )
+
         self.screen.blit(self.board_surface, (self.board_start, self.board_start))
 
         # draw the pieces
@@ -253,7 +305,7 @@ class Game:
 
         if self.last_cell_clicked is None:
             if ( int(self.board.grid[x,y]) == 0 
-                or int(self.board.grid[x,y]) != self.turn
+                or int(self.board.grid[x,y]) != self.board.turn
             ):
                 return
 
@@ -261,12 +313,12 @@ class Game:
             print(self.last_cell_clicked)
         else:
             if self.board.is_legal(self.last_cell_clicked, (x, y)):
+                print("moving")
                 self.board.move(self.last_cell_clicked, (x, y))
                 self.last_cell_clicked = None
 
-                self.turn *= -1
 
-            elif self.board.grid[x,y] == self.turn:
+            elif self.board.grid[x,y] == self.board.turn:
                 self.last_cell_clicked = (x, y)
 
     def run(self):
@@ -282,7 +334,6 @@ class Game:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
                         self.board.reset()
-                        self.turn = PW
 
                     if event.key == pygame.K_RIGHT:
                         self.board.redo()
@@ -306,8 +357,11 @@ class Game:
         return (fr_x, fr_y), (to_x, to_y)
 
 
+    def get_clock(self):
+        return pygame.time.Clock()
 
     def play(self, game_str):
+        clock = self.get_clock()
         moves = game_str.split(';')
 
         coords = [self.get_coords(move) for move in moves]
@@ -323,22 +377,26 @@ class Game:
 
         while True:
             for event in pygame.event.get():
+
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     return
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    self.handle_click(event.pos)
+
                 if event.type == pygame.KEYDOWN:
                     # right arrow to see next move
                     if event.key == pygame.K_RIGHT:
                         self.board.redo()
-                        self.draw_board()
 
-                        pygame.display.update()
        
                     if event.key == pygame.K_LEFT:
                         self.board.undo()
-                        self.draw_board()
 
-                        pygame.display.update()
+            self.draw_board()
+            pygame.display.update()
+            clock.tick(60)
 
 if __name__ == "__main__":
 
