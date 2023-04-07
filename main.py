@@ -147,6 +147,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 DARK_BROWN = (139, 69, 19)
 LIGHT_BROWN = (222, 184, 135)
+SELECTED = (78, 109, 122)
 
 
 
@@ -214,10 +215,6 @@ class Game:
 
 
     def draw_board(self):
-
-        self.screen.fill(BLACK)
-        self.draw_coordinates()
-        
         # chessboard pattern with light and dark brown squares
         for i in range(8):
             for j in range(8):
@@ -234,7 +231,19 @@ class Game:
                         (i * self.cell_width, j * self.cell_width, self.cell_width, self.cell_width),
                     )
 
-        # draw number of moves above board
+                if (i, j) == self.last_cell_clicked:
+                    # draw small selected circle
+
+                    s = pygame.Surface((self.cell_width, self.cell_width))
+                    s.set_alpha(200)
+                    s.fill(SELECTED)
+                    self.board_surface.blit(s, (i * self.cell_width, j * self.cell_width))
+
+
+
+        self.screen.blit(self.board_surface, (self.board_start, self.board_start))
+
+    def draw_num_moves(self):
         text = pygame.font.SysFont("comicsans", 40).render(
             f"Moves: {self.board.grid_idx}", 1, WHITE
         )
@@ -247,6 +256,7 @@ class Game:
             ),
         )
 
+    def draw_alternate(self):
         # above number of moves, print if we are in alternate history
         if self.board.in_alternate():
             text = pygame.font.SysFont("comicsans", 40).render(
@@ -261,35 +271,35 @@ class Game:
                 ),
             )
 
-        self.screen.blit(self.board_surface, (self.board_start, self.board_start))
-
+    def draw_pieces(self):
         # draw the pieces
         for i in range(8):
             for j in range(8):
                 if self.board.grid[i][j] == PW:
                     self.screen.blit(
                         self.wpawn,
-                        # (i * self.cell_width + self.cell_width // 2 - self.wpawn.get_width() // 2, j * self.cell_width + self.cell_width // 2 - self.wpawn.get_height() // 2),
                         (self.board_start + i * self.cell_width, self.board_start + j * self.cell_width),
                     )
-                    # pygame.draw.circle(
-                    #     self.board_surface,
-                    #     WHITE,
-                    #     (i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2),
-                    #     self.cell_width // 2 - 10,
-                    # )
+
                 elif self.board.grid[i][j] == PB:
                     self.screen.blit(
                         self.bpawn,
-                        # (i * self.cell_width + self.cell_width // 2 - self.bpawn.get_width() // 2, j * self.cell_width + self.cell_width // 2 - self.bpawn.get_height() // 2),
                         ( self.board_start + i * self.cell_width, self.board_start + j * self.cell_width),
                     )
-                    # pygame.draw.circle(
-                    #     self.board_surface,
-                    #     BLACK,
-                    #     (i * self.cell_width + self.cell_width // 2, j * self.cell_width + self.cell_width // 2),
-                    #     self.cell_width // 2 - 10,
-                    # )
+
+
+    def draw(self):
+
+        self.screen.fill(BLACK)
+
+        self.draw_board()
+        self.draw_coordinates()
+        
+        # draw number of moves above board
+        self.draw_num_moves()
+        self.draw_alternate()
+        self.draw_pieces()
+
 
 
     def handle_click(self, pos):
@@ -340,7 +350,7 @@ class Game:
                     if event.key == pygame.K_LEFT:
                         self.board.undo()
 
-            self.draw_board()
+            self.draw()
             pygame.display.update()
 
     def get_coords(self, move_str):
@@ -372,7 +382,7 @@ class Game:
 
         self.board.beginning()
 
-        self.draw_board()
+        self.draw()
         pygame.display.update()
 
         while True:
@@ -394,7 +404,7 @@ class Game:
                     if event.key == pygame.K_LEFT:
                         self.board.undo()
 
-            self.draw_board()
+            self.draw()
             pygame.display.update()
             clock.tick(60)
 
