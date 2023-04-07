@@ -169,13 +169,15 @@ class Game:
         self.board_start = (self.screen_width - self.board_width) // 2
         self.cell_width = self.board_width // 8
 
+
         self.board_surface = pygame.Surface((self.board_width, self.board_height))
 
         self.screen = pygame.display.set_mode(
             (self.screen_width, self.screen_height)
         )
 
-        self.last_cell_clicked = None
+        self.holding_piece = None
+        self.mousedown = False
 
         self.wpawn = self.get_pawn("white")
         self.bpawn = self.get_pawn("black")
@@ -237,13 +239,13 @@ class Game:
                         (i * self.cell_width, j * self.cell_width, self.cell_width, self.cell_width),
                     )
 
-                if (i, j) == self.last_cell_clicked:
-                    # draw small selected circle
+                # if (i, j) == self.holding_piece:
+                #     # draw small selected circle
 
-                    s = pygame.Surface((self.cell_width, self.cell_width))
-                    s.set_alpha(255)
-                    s.fill(SELECTED)
-                    self.board_surface.blit(s, (i * self.cell_width, j * self.cell_width))
+                #     s = pygame.Surface((self.cell_width, self.cell_width))
+                #     s.set_alpha(255)
+                #     s.fill(SELECTED)
+                #     self.board_surface.blit(s, (i * self.cell_width, j * self.cell_width))
 
 
 
@@ -281,7 +283,34 @@ class Game:
         # draw the pieces
         for i in range(8):
             for j in range(8):
-                if self.board.grid[i][j] == PW:
+                if (i, j) == self.holding_piece:
+
+                    #draw transparent circle around mouse
+                    s = pygame.Surface((self.cell_width + 10, self.cell_width + 10), pygame.SRCALPHA)
+
+                    pygame.draw.circle(
+                        s,
+                        SELECTED + (150,),
+                        (self.cell_width // 2 + 5, self.cell_width // 2 + 5),
+                        self.cell_width // 2 + 5,
+                    )
+
+                    self.screen.blit(s, (pygame.mouse.get_pos()[0] - self.cell_width // 2 - 5, pygame.mouse.get_pos()[1] - self.cell_width // 2 - 5))
+
+                    # draw the piece at the mouse position, slightly larger
+                    if self.board.grid[i][j] == PW:
+                        self.screen.blit(
+                            pygame.transform.scale(self.wpawn, (self.cell_width + 10, self.cell_width + 10)),
+                            (pygame.mouse.get_pos()[0] - self.cell_width // 2 - 5, pygame.mouse.get_pos()[1] - self.cell_width // 2 - 5),
+                        )
+
+                    elif self.board.grid[i][j] == PB:
+                        self.screen.blit(
+                            pygame.transform.scale(self.bpawn, (self.cell_width + 10, self.cell_width + 10)),
+                            (pygame.mouse.get_pos()[0] - self.cell_width // 2 - 5, pygame.mouse.get_pos()[1] - self.cell_width // 2 - 5),
+                        )
+
+                elif self.board.grid[i][j] == PW:
                     self.screen.blit(
                         self.wpawn,
                         (self.board_start + i * self.cell_width, self.board_start + j * self.cell_width),
@@ -292,6 +321,7 @@ class Game:
                         self.bpawn,
                         ( self.board_start + i * self.cell_width, self.board_start + j * self.cell_width),
                     )
+
 
     def draw_to_move(self):
         # draw who's turn it is
@@ -360,9 +390,30 @@ class Game:
         self.draw_to_move()
         self.draw_material()
 
+    def handle_mouseup(self, pos):
+        self.mousedown = False
+
+        x, y = pos
+        x -= self.board_start
+        y -= self.board_start
+
+        x //= self.cell_width
+        y //= self.cell_width
+
+        if self.holding_piece is None:
+            return
+
+        if self.board.is_legal(self.holding_piece, (x, y)):
+            print("moving")
+            self.board.move(self.holding_piece, (x, y))
+
+        self.holding_piece = None
 
 
-    def handle_click(self, pos):
+    def handle_mousedown(self, pos):
+
+        self.mousedown = True
+
         x, y = pos
         x -= self.board_start
         y -= self.board_start
@@ -373,24 +424,11 @@ class Game:
         if not self.board.in_bounds(x, y):
             return
 
-        if self.last_cell_clicked is None:
-            if ( int(self.board.grid[x,y]) == 0 
-                or int(self.board.grid[x,y]) != self.board.turn
-            ):
-                return
-
-            self.last_cell_clicked = (x, y)
-            print(self.last_cell_clicked)
-        else:
-            if self.board.is_legal(self.last_cell_clicked, (x, y)):
-                print("moving")
-                self.board.move(self.last_cell_clicked, (x, y))
-                self.last_cell_clicked = None
+        if self.board.grid[x][y] == self.board.turn:
+            self.holding_piece = (x, y)
 
 
-            elif self.board.grid[x,y] == self.board.turn:
-                self.last_cell_clicked = (x, y)
-
+        # else:
     def run(self):
         while True:
             for event in pygame.event.get():
@@ -398,7 +436,11 @@ class Game:
                     pygame.quit()
                     return
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handle_click(event.pos)
+                    self.handle_mousedown(event.pos)
+
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    self.handle_mouseup(event.pos)
+
 
                 # reset board on 'r'
                 elif event.type == pygame.KEYDOWN:
@@ -453,7 +495,10 @@ class Game:
                     return
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handle_click(event.pos)
+                    self.handle_mousedown(event.pos)
+
+                if event.type == pygame.MOUSEBUTTONUP:
+                    self.handle_mouseup(event.pos)
 
                 if event.type == pygame.KEYDOWN:
                     # right arrow to see next move
