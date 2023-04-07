@@ -41,6 +41,12 @@ class Board:
             self.history.append(self.history[-1].copy())
             self.grid_idx += 1
 
+    def black_material(self):
+        return np.sum(self.grid == PB)
+
+    def white_material(self):
+        return np.sum(self.grid == PW)
+
     def move(self, f, t):
 
         if not self.is_legal(f, t):
@@ -147,7 +153,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 DARK_BROWN = (139, 69, 19)
 LIGHT_BROWN = (222, 184, 135)
-SELECTED = (78, 109, 122)
+SELECTED = (186, 97, 180)
 
 
 
@@ -235,7 +241,7 @@ class Game:
                     # draw small selected circle
 
                     s = pygame.Surface((self.cell_width, self.cell_width))
-                    s.set_alpha(200)
+                    s.set_alpha(255)
                     s.fill(SELECTED)
                     self.board_surface.blit(s, (i * self.cell_width, j * self.cell_width))
 
@@ -287,6 +293,58 @@ class Game:
                         ( self.board_start + i * self.cell_width, self.board_start + j * self.cell_width),
                     )
 
+    def draw_to_move(self):
+        # draw who's turn it is
+        if self.board.turn == PW:
+            text = pygame.font.SysFont("comicsans", 40).render(
+                f"White to move", 1, WHITE
+            )
+        else:
+            text = pygame.font.SysFont("comicsans", 40).render(
+                f"Black to move", 1, WHITE
+            )
+
+        self.screen.blit(
+            text,
+            (
+                self.board_start + self.board_width // 2 - text.get_width() // 2,
+                self.board_start + self.board_height + 50,
+            ),
+        )
+
+    def draw_material(self):
+        # black material in upper left
+        # white material in upper right
+
+        font_size = 30
+        # draw black material
+        text = pygame.font.SysFont("comicsans", font_size).render(
+            f"Black material: {self.board.black_material()}", 1, WHITE
+        )
+
+        self.screen.blit(
+            text,
+            (
+                self.board_start,
+                self.board_start - text.get_height() - 10,
+            ),
+        )
+
+        # draw white material
+        text = pygame.font.SysFont("comicsans", font_size).render(
+            f"White material: {self.board.white_material()}", 1, WHITE
+        )
+
+        self.screen.blit(
+            text,
+            (
+                self.board_start + self.board_width - text.get_width(),
+                self.board_start - text.get_height() - 10,
+            ),
+        )
+
+
+
 
     def draw(self):
 
@@ -299,6 +357,8 @@ class Game:
         self.draw_num_moves()
         self.draw_alternate()
         self.draw_pieces()
+        self.draw_to_move()
+        self.draw_material()
 
 
 
